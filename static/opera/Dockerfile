@@ -1,7 +1,7 @@
 ARG VERSION
 FROM selenoid/dev_opera:$VERSION
 
-COPY operadriver_linux64/operadriver /usr/bin/
+COPY operadriver /usr/bin/
 COPY entrypoint.sh /
 
 RUN \

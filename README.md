@@ -49,6 +49,8 @@ docker build -t selenoid/vnc_yandex:24.12.4 --build-arg VERSION=24.12.4.1055 --l
 
 Opera driver source: https://github.com/operasoftware/operachromiumdriver/releases
 
-Opera browser for dev/ubuntu source: https://deb.opera.com/opera-stable/pool/non-free/o/opera-stable/
+Opera browser for dev/ubuntu source: https://deb.opera.com/opera-stable/pool/non-free/o/opera-stable/ https://get.opera.com/pub/opera/desktop/
 
-https://get.opera.com/pub/opera/desktop/109.0.5097.80/linux/
+docker build -t selenoid/dev_opera:116.0.5366.127 --build-arg VERSION=116.0.5366.127 ./apt
+
+docker build -t selenoid/vnc_opera:116.0 --build-arg VERSION=116.0.5366.127 --label driver=operadriver:131.0.67787.86 .
