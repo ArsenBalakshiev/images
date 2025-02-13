@@ -166,7 +166,7 @@ func (c *Chrome) parseChromeDriverVersion(pkgVersion string, chromeDriverVersion
 }
 
 func (c *Chrome) downloadChromeDriver(dir string, version string, chromeDriverVersions map[string]string) error {
-	u := fmt.Sprintf("https://chromedriver.storage.googleapis.com/%s/chromedriver_linux64.zip", version)
+	u := fmt.Sprintf("https://storage.googleapis.com/chrome-for-testing-public/%s/linux64/chromedriver-linux64.zip", version)
 	fn := chromeDriverBinary
 	if cdu, ok := chromeDriverVersions[version]; ok {
 		u = cdu

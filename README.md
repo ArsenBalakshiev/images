@@ -22,3 +22,33 @@ Moved to: http://aerokube.com/images/latest/#_building_images
 
 ## Image information
 Moved to: http://aerokube.com/images/latest/#_browser_image_information
+
+Chrome driver source: https://googlechromelabs.github.io/chrome-for-testing/known-good-versions.json
+
+Chrome browser for deb/ubuntu source: https://mirror.cs.uchicago.edu/google-chrome/pool/main/g/google-chrome-stable/
+
+./images.exe chrome -b 133.0.6943.53-1 -d 133.0.6943.53 -t selenoid/vnc_chrome:133
+
+docker build -t selenoid/dev_chrome:133.0.6943.98 --build-arg VERSION=133.0.6943.98-1 ./apt
+
+подложить драйвер
+
+docker build -t selenoid/vnc_chrome:133.0 --build-arg VERSION=133.0.6943.98 --label driver=chromedriver:133.0.6943.98 .
+
+Yandex driver source: https://github.com/yandex/YandexDriver/releases/
+
+Yandex browser for dev/ubuntu source: https://repo.yandex.ru/yandex-browser/deb/pool/main/y/yandex-browser-stable/
+
+./images yandex -b 24.12.4.1055-1 -d 24.12.4.1056 -t selenoid/vnc_yandex:24.12.4
+
+docker build -t selenoid/dev_yandex:24.12.4.1055 --build-arg VERSION=24.12.4.1055-1 ./apt
+
+подложить драйвер
+
+docker build -t selenoid/vnc_yandex:24.12.4 --build-arg VERSION=24.12.4.1055 --label driver=yandexdriver:24.12.4.1056 .
+
+Opera driver source: https://github.com/operasoftware/operachromiumdriver/releases
+
+Opera browser for dev/ubuntu source: https://deb.opera.com/opera-stable/pool/non-free/o/opera-stable/
+
+https://get.opera.com/pub/opera/desktop/109.0.5097.80/linux/
