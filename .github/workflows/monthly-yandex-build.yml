@@ -110,16 +110,16 @@ jobs:
           OWNER="${OWNER}"
           TAG_HEADLESS="yandex-$REVISION"
           TAG_VNC="yandex-$REVISION-vnc"
-          # ghcr.io/<owner>/jelenoid - один пакет, проверяем оба тега через versions API.
+          # ghcr.io/<owner>/selenoid-images - один пакет, проверяем оба тега через versions API.
           # 404 = пакета ещё нет, считаем что тегов тоже нет.
-          echo "Listing existing tags for ghcr.io/$OWNER/jelenoid"
+          echo "Listing existing tags for ghcr.io/$OWNER/selenoid-images"
           HTTP_CODE=$(curl -s -o /tmp/ghcr-response.json -w "%{http_code}" \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/users/$OWNER/packages/container/jelenoid/versions?per_page=100")
+            "https://api.github.com/users/$OWNER/packages/container/selenoid-images/versions?per_page=100")
           echo "API response code: $HTTP_CODE"
           if [ "$HTTP_CODE" = "404" ]; then
-            echo "Package jelenoid does not exist yet (first push). No existing tags."
+            echo "Package selenoid-images does not exist yet (first push). No existing tags."
             TAGS=""
           else
             TAGS=$(python3 -c "
@@ -157,7 +157,7 @@ jobs:
           set -eu
           cd chromium/yandex
           python3 build.py \
-            --registry "ghcr.io/${OWNER}" \
+            --registry "ghcr.io/${OWNER}/selenoid-images" \
             --push \
             --version "${{ steps.resolve-browser.outputs.version }}" \
             --driver-url "${{ steps.resolve-driver.outputs.driver_url }}"
@@ -169,7 +169,7 @@ jobs:
           EXISTED="${{ steps.check.outputs.exists }}"
           OWNER="${OWNER}"
           if [ "$EXISTED" = "true" ]; then
-            echo "::notice title=Up to date::ghcr.io/$OWNER/jelenoid:yandex-$REVISION and yandex-$REVISION-vnc already published. Nothing to do."
+            echo "::notice title=Up to date::ghcr.io/$OWNER/selenoid-images:yandex-$REVISION and yandex-$REVISION-vnc already published. Nothing to do."
           else
-            echo "::notice title=Built::ghcr.io/$OWNER/jelenoid:yandex-$REVISION and yandex-$REVISION-vnc published."
+            echo "::notice title=Built::ghcr.io/$OWNER/selenoid-images:yandex-$REVISION and yandex-$REVISION-vnc published."
           fi
