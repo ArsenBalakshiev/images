@@ -1,0 +1,129 @@
+name: Build and publish Chrome image
+
+# Runs once a month to check for new Chrome Stable releases and publish
+# new docker images to GHCR if a new version is available.
+on:
+  schedule:
+    - cron: '0 6 1 * *'  # 1st of every month, 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Chrome version to build (leave empty for latest stable)'
+        required: false
+        type: string
+        default: ''
+      force:
+        description: 'Force rebuild even if version already exists in GHCR'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  packages: write
+
+# GHCR требует lowercase. github.repository_owner сохраняет регистр,
+# а | lower/toLower() не работают в workflow-level env у парсера.
+# Используем bash tr в setup-step и экспорт в $GITHUB_ENV.
+
+jobs:
+  build-chrome:
+    runs-on: [self-hosted, jelenoid-runner]
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Export OWNER (lowercased GitHub login for OCI image tag)
+        run: |
+          echo "OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+
+      - name: Login to ghcr.io
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Resolve target version
+        id: resolve
+        run: |
+          set -eu
+          JSON_URL="https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json"
+          PINNED="${{ inputs.version }}"
+          if [ -n "$PINNED" ]; then
+            VERSION="$PINNED"
+            echo "Using pinned version: $VERSION"
+          else
+            echo "Fetching latest stable from $JSON_URL"
+            VERSION=$(curl -fsSL "$JSON_URL" | python3 -c "import json,sys; print(json.load(sys.stdin)['channels']['Stable']['version'])")
+            echo "Latest stable: $VERSION"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Check if version already exists in GHCR
+        id: check
+        run: |
+          set -eu
+          VERSION="${{ steps.resolve.outputs.version }}"
+          OWNER="${OWNER}"
+          TAG_HEADLESS="chrome-$VERSION"
+          TAG_VNC="chrome-$VERSION-vnc"
+          # In GHCR, ghcr.io/<owner>/jelenoid:chrome-<version> is one package
+          # (`jelenoid`) with tags. We list versions of the `jelenoid` package
+          # and look for both tags.
+          # 404 means the package doesn't exist yet (first push) — treat as empty tag list.
+          echo "Listing existing tags for ghcr.io/$OWNER/jelenoid"
+          HTTP_CODE=$(curl -s -o /tmp/ghcr-response.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/users/$OWNER/packages/container/jelenoid/versions?per_page=100")
+          echo "API response code: $HTTP_CODE"
+          if [ "$HTTP_CODE" = "404" ]; then
+            echo "Package jelenoid does not exist yet (first push). No existing tags."
+            TAGS=""
+          else
+            TAGS=$(python3 -c "
+          import json
+          try:
+              with open('/tmp/ghcr-response.json') as f:
+                  data = json.load(f)
+              for v in data:
+                  for t in v.get('metadata', {}).get('container', {}).get('tags', []):
+                      print(t)
+          except Exception as e:
+              print(f'::warning::failed to parse response: {e}', file=__import__('sys').stderr)
+          ")
+            echo "Existing tags:"
+            echo "$TAGS" | sed 's/^/  /'
+          fi
+          MISSING=""
+          if ! echo "$TAGS" | grep -Fxq "$TAG_HEADLESS"; then
+            MISSING="$MISSING $TAG_HEADLESS"
+          fi
+          if ! echo "$TAGS" | grep -Fxq "$TAG_VNC"; then
+            MISSING="$MISSING $TAG_VNC"
+          fi
+          if [ -z "$MISSING" ]; then
+            echo "Tags $TAG_HEADLESS and $TAG_VNC already exist in GHCR."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Missing tags:$MISSING. Will build."
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build and push
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          set -eu
+          cd chromium/chrome
+          python3 build.py --registry "ghcr.io/${OWNER}" --push --version "${{ steps.resolve.outputs.version }}"
+
+      - name: Summary
+        if: always()
+        run: |
+          VERSION="${{ steps.resolve.outputs.version }}"
+          EXISTED="${{ steps.check.outputs.exists }}"
+          OWNER="${OWNER}"
+          if [ "$EXISTED" = "true" ]; then
+            echo "::notice title=Up to date::ghcr.io/$OWNER/jelenoid:chrome-$VERSION and chrome-$VERSION-vnc already published. Nothing to do."
+          else
+            echo "::notice title=Built::ghcr.io/$OWNER/jelenoid:chrome-$VERSION and chrome-$VERSION-vnc published."
+          fi
