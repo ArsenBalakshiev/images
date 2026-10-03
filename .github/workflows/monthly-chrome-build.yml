@@ -28,7 +28,7 @@ permissions:
 
 jobs:
   build-chrome:
-    runs-on: [self-hosted, jelenoid-runner]
+    runs-on: [self-hosted, docker-runner]
     timeout-minutes: 60
 
     steps:

@@ -31,7 +31,7 @@ permissions:
 
 jobs:
   build-yandex:
-    runs-on: [self-hosted, jelenoid-runner]
+    runs-on: [self-hosted, docker-runner]
     timeout-minutes: 60
 
     steps:
