@@ -127,7 +127,8 @@ RUN { echo '#!/bin/sh'; echo 'exec /opt/yandex/browser/yandex-browser --no-sandb
 ENV CHROME_BIN=/usr/local/bin/google-chrome
 USER jelenoid
 
-EXPOSE 4444 5900 7070
+# 6099 = 6000 + DISPLAY_NUM: X11 TCP, так ffmpeg x11grab у рекордера читает экран.
+EXPOSE 4444 5900 6099 7070
 
 HEALTHCHECK --interval=10s --timeout=3s --start-period=15s --retries=5 \
     CMD curl -fsS http://127.0.0.1:4444/status | grep -q '"ready":true' || exit 1
